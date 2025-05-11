@@ -1,3 +1,4 @@
+use borsh::{BorshSerialize, BorshDeserialize};
 use solana_program::{
     account_info::AccountInfo,
     entrypoint,
@@ -8,6 +9,33 @@ use solana_program::{
 };
 
 entrypoint!(process_instruction);
+
+
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone)]
+pub enum GreetingInstruction {
+    /// Creates a new greeting account and sets an initial message.
+    ///
+    /// Accounts expected:
+    /// 0. `[signer, writable]` The account that will pay for the new greeting account's rent
+    ///                         and will be the authority of the new greeting account.
+    /// 1. `[writable]` The uninitialized greeting account to be created (Program Derived Address - PDA).
+    /// 2. `[]` The System Program (required to create new accounts).
+    CreateGreeting {
+        name: String,
+        message: String,
+    },
+
+    /// Sets a new greeting message on an existing greeting account.
+
+    /// Accounts expected:
+    /// 0. `[signer]` The authority of the greeting account.
+    /// 1. `[writable]` The greeting account (PDA) whose message is to be changed.
+   SetGreeting {
+    message: String,
+   },
+    // We could add a `ResetGreeting` or `CloseGreetingAccount` later.
+}
+
 
 pub fn process_instruction(
     program_id: &Pubkey,
