@@ -37,6 +37,48 @@ pub enum GreetingInstruction {
 }
 
 
+/// Structure of the data stored in a greeting account.
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone, Default)]
+pub struct GreetingAccountState {
+    // The Authority (public key) that is allowed to change the greeting.
+    pub authority: Pubkey,
+
+    // A name or title for the greeting.
+    pub name: String,
+
+    // The greeting message itself.
+    pub message: String,
+
+    // A counter for how many times the greeting has been updated (just for fun!).
+    pub update_count: u32,
+}
+
+
+// Let's define some constraints, especially for Strings.
+// Solana accounts have size limits. Unbounded strings are risky.
+impl GreetingAccountState {
+    // Max length for the 'name' field.
+    pub const MAX_NAME_LENGTH: usize = 32;
+    // Max length for the 'message' field.
+    pub const MAX_MESSAGE_LENGTH: usize = 128;
+    // Discriminator for account type, can be useful if your program manages multiple account types
+    pub const ACCOUNT_DISCRIMINATOR: &'static str = "GREETING"; // Not strictly needed for borsh, but good practice for some patterns.
+    // Calculate the maximum space needed for the account space.
+    pub fn get_max_space_needed() -> usize {
+        // Pubkey = 32 bytes
+    // String length (u32 = 4 bytes) + max characters for name
+    // String length (u32 = 4 bytes) + max characters for message
+    // u32 = 4 bytes for update_count
+
+    32 + // authority
+    (4 + Self::MAX_NAME_LENGTH) + // name
+    (4 + Self::MAX_MESSAGE_LENGTH) + // message
+    4 // update_count
+    }
+}
+
+
+
 pub fn process_instruction(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -61,6 +103,35 @@ pub fn process_instruction(
     msg!("Instruction data length: {} bytes", instruction_data.len());
     if !instruction_data.is_empty() {
         msg!("First byte of instruction data: {}", instruction_data[0]);
+    }
+
+
+    // Attempt to deserialize the instruction data into our GreetingInstruction enum
+    let instruction = GreetingInstruction::try_from_slice(instruction_data).map_err(|err| {
+        msg!("Failed to deserialize instruction data: {}", err);
+        ProgramError::InvalidInstructionData
+    })?;
+
+    // Now we can match on the specific instruction variant
+    match instruction {
+        GreetingInstruction::CreateGreeting { name, message } => {
+            msg!("Instruction: CreateGreeting");
+            msg!("Name: {}", name);
+            msg!("Message: {}", message);
+            // Here we would add logic to:
+            // 1. Validate name and message lengths against MAX_NAME_LENGTH and MAX_MESSAGE_LENGTH.
+            // 2. Process the accounts to create and initialize the greeting account.
+            // We'll do this in the next step.
+        }
+        GreetingInstruction::SetGreeting { message } => {
+            msg!("Instruction: SetGreeting");
+            msg!("New Message: {}", message);
+            // Here we would add logic to:
+            // 1. Validate message length.
+            // 2. Process accounts to ensure the signer is the authority.
+            // 3. Update the message in the greeting account.
+            // We'll do this in the next step.
+        }
     }
 
     Ok(())
