@@ -13,20 +13,22 @@ entrypoint!(process_instruction);
 
 #[derive(BorshSerialize, BorshDeserialize, Debug, Clone)]
 pub enum GreetingInstruction {
-    /// Creates a new greeting account and sets an initial message.
+    /// Creates a new greeting account (PDA) and sets an initial message.
     ///
-    /// Accounts expected:
-    /// 0. `[signer, writable]` The account that will pay for the new greeting account's rent
-    ///                         and will be the authority of the new greeting account.
-    /// 1. `[writable]` The uninitialized greeting account to be created (Program Derived Address - PDA).
-    /// 2. `[]` The System Program (required to create new accounts).
+    /// Accounts expected by this instruction:
+    /// 0. `[signer, writable]` `payer_account`: The account paying for the new greeting account's rent
+    ///                         and whose key will be used as a seed for the PDA. Becomes the authority.
+    /// 1. `[writable]` `greeting_account_pda`: The PDA to be created and initialized.
+    ///                         Its address is derived from `program_id`, `payer_account.key`, and potentially `name`.
+    ///                         The client must pass the correct derived address here.
+    /// 2. `[]` `system_program`: The Solana System Program, required for creating accounts.
     CreateGreeting {
         name: String,
         message: String,
     },
 
     /// Sets a new greeting message on an existing greeting account.
-
+    /// 
     /// Accounts expected:
     /// 0. `[signer]` The authority of the greeting account.
     /// 1. `[writable]` The greeting account (PDA) whose message is to be changed.
@@ -61,11 +63,11 @@ impl GreetingAccountState {
     pub const MAX_NAME_LENGTH: usize = 32;
     // Max length for the 'message' field.
     pub const MAX_MESSAGE_LENGTH: usize = 128;
-    // Discriminator for account type, can be useful if your program manages multiple account types
+    // Discriminator for account type, can be useful if the program manages multiple account types
     pub const ACCOUNT_DISCRIMINATOR: &'static str = "GREETING"; // Not strictly needed for borsh, but good practice for some patterns.
     // Calculate the maximum space needed for the account space.
     pub fn get_max_space_needed() -> usize {
-        // Pubkey = 32 bytes
+    // Pubkey = 32 bytes
     // String length (u32 = 4 bytes) + max characters for name
     // String length (u32 = 4 bytes) + max characters for message
     // u32 = 4 bytes for update_count
@@ -91,7 +93,7 @@ pub fn process_instruction(
 
     // Inspect the accounts passed to this instruction
     for (i, account) in accounts.iter().enumerate() {
-        msg!("Account: {}, Pubkey: {}, Is _singer: {}, Is_writable: {}",
+        msg!("Account: {}, Pubkey: {}, Is _signer: {}, Is_writable: {}",
             i,
             account.key,
             account.is_signer,
